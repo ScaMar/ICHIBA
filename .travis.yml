@@ -70,7 +70,7 @@ before_deploy:
 - if [ "$HOST" == "x86_64-apple-darwin14" ]; then mv IchibaCoin.dmg IchibaCoin-$TAG-macosx-generic.dmg;
   FILE=IchibaCoin-$TAG-macosx-generic.dmg; fi
 - if [ "$HOST" == "x86_64-w64-mingw32" ]; then cd $TRAVIS_BUILD_DIR/../; zip -r IchibaCoin-$TAG-win-x64.zip
-  IchibaCoin-$HOST-$TAG; mv IchibaVoin-$TAG-win-x64.zip $TRAVIS_BUILD_DIR/; cd $TRAVIS_BUILD_DIR;
+  IchibaCoin-$HOST-$TAG; mv IchibaCoin-$TAG-win-x64.zip $TRAVIS_BUILD_DIR/; cd $TRAVIS_BUILD_DIR;
   FILE="IchibaCoin-$TAG-win-x64.zip"; fi
 - if [ "$HOST" == "i686-w64-mingw32" ]; then cd $TRAVIS_BUILD_DIR/../; zip -r IchibaCoin-$TAG-win-x32.zip
   IchibaCoin-$HOST-$TAG; mv IchibaCoin-$TAG-win-x32.zip $TRAVIS_BUILD_DIR/; cd $TRAVIS_BUILD_DIR;
