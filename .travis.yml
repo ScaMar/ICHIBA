@@ -19,19 +19,36 @@ env:
   - LASTTAG=$(git describe --tags)
   - TAG="$LASTTAG"
   matrix:
-  - HOST=x86_64-w64-mingw32 DPKG_ADD_ARCH="i386" PACKAGES="python3 nsis g++-mingw-w64-x86-64 wine1.6 bc zip unzip libc6-dev libc6-dev-amd64" RUN_TESTS=false GOAL="install-strip" BITCOIN_CONFIG="--enable-gui --enable-reduce-exports --disable-tests" MAKEJOBS="-j4" WINE=true
-  - HOST=x86_64-pc-linux-gnu PACKAGES="bc python3-zmq zip unzip libc6-dev libc6-dev-amd64" RUN_TESTS=false GOAL="install-strip" BITCOIN_CONFIG="--enable-zmq --enable-glibc-back-compat --enable-reduce-exports --disable-tests" CPPFLAGS="-DDEBUG_LOCKORDER -DENABLE_DASH_DEBUG"
-  - HOST=arm-linux-gnueabihf DEP_OPTS="NO_QT=1" PACKAGES="g++-arm-linux-gnueabihf libc6-dev-armhf-cross" GOAL="install-strip" BITCOIN_CONFIG="--enable-glibc-back-compat --enable-reduce-exports --disable-tests"
-  - HOST=i686-w64-mingw32 DPKG_ADD_ARCH="i386" PACKAGES="python3 nsis g++-mingw-w64-i686 wine1.6 bc zip unzip libc6-dev-i386" RUN_TESTS=false GOAL="install-strip" BITCOIN_CONFIG="--enable-reduce-exports --disable-tests"
-  - HOST=i686-pc-linux-gnu PACKAGES="g++-multilib bc python3-zmq zip unzip libc6-dev libc6-dev-i386" RUN_TESTS=false GOAL="install-strip" BITCOIN_CONFIG="--enable-zmq --enable-glibc-back-compat --enable-reduce-exports --disable-tests LDFLAGS=-static-libstdc++"
-  - HOST=x86_64-apple-darwin14 PACKAGES="cmake imagemagick libcap-dev librsvg2-bin libz-dev libbz2-dev libtiff-tools python-dev zip unzip libc6-dev libc6-dev-amd64" BITCOIN_CONFIG="--enable-gui --enable-reduce-exports --disable-tests" OSX_SDK=10.11 GOAL="deploy"
+  - HOST=x86_64-w64-mingw32 DPKG_ADD_ARCH="i386" PACKAGES="python3 nsis g++-mingw-w64-x86-64
+    wine1.6 bc zip unzip libc6-dev libc6-dev-amd64" RUN_TESTS=false GOAL="install-strip"
+    BITCOIN_CONFIG="--enable-gui --enable-reduce-exports --disable-tests" MAKEJOBS="-j4"
+    WINE=true
+  - HOST=x86_64-pc-linux-gnu PACKAGES="bc python3-zmq zip unzip libc6-dev libc6-dev-amd64"
+    RUN_TESTS=false GOAL="install-strip" BITCOIN_CONFIG="--enable-zmq --enable-glibc-back-compat
+    --enable-reduce-exports --disable-tests" CPPFLAGS="-DDEBUG_LOCKORDER -DENABLE_DASH_DEBUG"
+  - HOST=arm-linux-gnueabihf DEP_OPTS="NO_QT=1" PACKAGES="g++-arm-linux-gnueabihf
+    libc6-dev-armhf-cross" GOAL="install-strip" BITCOIN_CONFIG="--enable-glibc-back-compat
+    --enable-reduce-exports --disable-tests"
+  - HOST=i686-w64-mingw32 DPKG_ADD_ARCH="i386" PACKAGES="python3 nsis g++-mingw-w64-i686
+    wine1.6 bc zip unzip libc6-dev-i386" RUN_TESTS=false GOAL="install-strip" BITCOIN_CONFIG="--enable-reduce-exports
+    --disable-tests"
+  - HOST=i686-pc-linux-gnu PACKAGES="g++-multilib bc python3-zmq zip unzip libc6-dev
+    libc6-dev-i386" RUN_TESTS=false GOAL="install-strip" BITCOIN_CONFIG="--enable-zmq
+    --enable-glibc-back-compat --enable-reduce-exports --disable-tests LDFLAGS=-static-libstdc++"
+  - HOST=x86_64-apple-darwin14 PACKAGES="cmake imagemagick libcap-dev librsvg2-bin
+    libz-dev libbz2-dev libtiff-tools python-dev zip unzip libc6-dev libc6-dev-amd64"
+    BITCOIN_CONFIG="--enable-gui --enable-reduce-exports --disable-tests" OSX_SDK=10.11
+    GOAL="deploy"
 before_install:
 - travis_retry sudo apt-get install python-dev
-- export PATH=$(echo $PATH | tr ':' "\n" | sed '/\/opt\/python/d' | tr "\n" ":" |  sed "s|::|:|g")
+- export PATH=$(echo $PATH | tr ':' "\n" | sed '/\/opt\/python/d' | tr "\n" ":" |  sed
+  "s|::|:|g")
 install:
-- if [ -n "$DPKG_ADD_ARCH" ]; then sudo dpkg --add-architecture "$DPKG_ADD_ARCH" ; fi
+- if [ -n "$DPKG_ADD_ARCH" ]; then sudo dpkg --add-architecture "$DPKG_ADD_ARCH" ;
+  fi
 - if [ -n "$PACKAGES" ]; then travis_retry sudo apt-get update; fi
-- if [ -n "$PACKAGES" ]; then travis_retry sudo apt-get install --no-install-recommends --no-upgrade -qq $PACKAGES; fi
+- if [ -n "$PACKAGES" ]; then travis_retry sudo apt-get install --no-install-recommends
+  --no-upgrade -qq $PACKAGES; fi
 before_script:
 - unset CC; unset CXX
 - mkdir -p depends/SDKs depends/sdk-sources
@@ -45,5 +62,35 @@ script:
 - make $MAKEJOBS HOST=$HOST $DEP_OPTS
 - cd $TRAVIS_BUILD_DIR
 - "./autogen.sh"
-- CONFIG_SITE=$TRAVIS_BUILD_DIR/depends/$HOST/share/config.site ./configure $BITCOIN_CONFIG_ALL $BITCOIN_CONFIG --prefix=$TRAVIS_BUILD_DIR/../ichiba-$HOST-$TAG
-- make $MAKEJOBS $GOAL || ( echo "Build failure. Verbose build follows." && make $GOAL V=1 ; false )
+- CONFIG_SITE=$TRAVIS_BUILD_DIR/depends/$HOST/share/config.site ./configure $BITCOIN_CONFIG_ALL
+  $BITCOIN_CONFIG --prefix=$TRAVIS_BUILD_DIR/../ichiba-$HOST-$TAG
+- make $MAKEJOBS $GOAL || ( echo "Build failure. Verbose build follows." && make $GOAL
+  V=1 ; false )
+before_deploy:
+- if [ "$HOST" == "x86_64-apple-darwin14" ]; then mv Ichibacoin.dmg Ichibacoin-$TAG-macosx-generic.dmg;
+  FILE=Ichibacoin-$TAG-macosx-generic.dmg; fi
+- if [ "$HOST" == "x86_64-w64-mingw32" ]; then cd $TRAVIS_BUILD_DIR/../; zip -r Ichibacoin-$TAG-win-x64.zip
+  Ichibacoin-$HOST-$TAG; mv Ichibacoin-$TAG-win-x64.zip $TRAVIS_BUILD_DIR/; cd $TRAVIS_BUILD_DIR;
+  FILE="Ichibacoin-$TAG-win-x64.zip"; fi
+- if [ "$HOST" == "i686-w64-mingw32" ]; then cd $TRAVIS_BUILD_DIR/../; zip -r Ichibacoin-$TAG-win-x32.zip
+  Ichibacoin-$HOST-$TAG; mv Ichibacoin-$TAG-win-x32.zip $TRAVIS_BUILD_DIR/; cd $TRAVIS_BUILD_DIR;
+  FILE="Ichibacoin-$TAG-win-x32.zip"; fi
+- if [ "$HOST" == "i686-pc-linux-gnu" ]; then cd $TRAVIS_BUILD_DIR/../; zip -r Ichibacoin-$TAG-$HOST.zip
+  Ichibacoin-$HOST-$TAG; mv Ichibacoin-$TAG-$HOST.zip $TRAVIS_BUILD_DIR/; cd $TRAVIS_BUILD_DIR;
+  FILE="Ichibacoin-$TAG-$HOST.zip"; fi
+- if [ "$HOST" == "x86_64-pc-linux-gnu" ]; then cd $TRAVIS_BUILD_DIR/../; zip -r Ichibacoin-$TAG-$HOST.zip
+  Ichibacoin-$HOST-$TAG; mv Ichibacoin-$TAG-$HOST.zip $TRAVIS_BUILD_DIR/; cd $TRAVIS_BUILD_DIR;
+  FILE="Ichibacoin-$TAG-$HOST.zip"; fi
+- if [ "$HOST" == "arm-linux-gnueabihf" ]; then cd $TRAVIS_BUILD_DIR/../; zip -r Ichibacoin-$TAG-$HOST.zip
+  Ichibacoin-$HOST-$TAG; mv Ichibacoin-$TAG-$HOST.zip $TRAVIS_BUILD_DIR/; cd $TRAVIS_BUILD_DIR;
+  FILE="Ichibacoin-$TAG-$HOST.zip"; fi
+deploy:
+  provider: releases
+  api_key:
+    secure: cEFUlMBXpkkEFt/dlDxPtjVmSLG8/3dGd2/qnFN7ef08/r8RYTGtTa9RrtHi5McxCcpbYCuSu2ImcapMtmNibk4FxAiT1nAG4ZmAHSlawtZSoSXk/p/QGwzT/vDiWFBxCqel/RU+q5kQ4YAvGtkbLKVxWh4iIe1d9vJgKf4pIl+gz7Hf8JdbPl8Cz9gGcESK9GjYlIHSvPtPJiQ+LgbmYH+2j7z2JqRrihEnQwDA+vZ4OajBMPDBhmeXRc2cOu6aqC/ht35gQvul2jMCY7+K5us2NwaQgbNCEnfRo3lGylIi/c9ifaMtPMpqHn+jnn0qKML5JSYy/UuwozLlENG6tHWWUwYC+tkQhglrvDphiIubd9ZMepy0UqkP7KnDRuuan5K7ZRKjil/8nnCOncSTqFlWebXAZ8VTuNtmPhnxoSExxLs7D25rHHom18sjU/hJAceuIFgP8BfgyKqrqnpYrkmjUBZ/iG3SEuDqUlw5zYkGpbmzBJqXCqjjQKKfXNd9NOVKZ1wpBWBjr5ZdV/9FVbHhhMo0PPm/ZFqZu+8iCpEzi1rf9RxtomGSURV3LfeNFRXj84fEloZwGXuUyjpni90m/8hq37VnmA/7g9pfNRmtzLR/tP4TK2MCgKmGR6BlYzSLe3DkFTiBDxQNAZdvvAwstYGPC70hapCFhvhyIJc=
+  file: "$FILE"
+  on:
+    repo: ScaMar/ICHIBA
+    branch: master
+    tags: true
+  skip_cleanup: true
